@@ -73,16 +73,17 @@ Thread thrTimer             = Thread();
 ThreadController thrContrl  = ThreadController();
 
 
-cRelay relay0 = cRelay(WEMOS_PIN_D0);
-cRelay relay1 = cRelay(WEMOS_PIN_D1);
+cRelay relay0 = cRelay(PIN_RELAY1);
+cRelay relay1 = cRelay(PIN_RELAY2);
 
 void Init ( ) {
+    pinMode(PIN_LED,   OUTPUT);
+    Serial.begin(9600);
 }
 
 
 void setup ( ) {
     Init();
-    Serial.begin(9600);
 #if(WIFI == 1)
     Serial.print("\n***** WIFI *****");
     WiFi.begin(ssid, password);
