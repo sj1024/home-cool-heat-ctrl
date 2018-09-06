@@ -119,7 +119,7 @@ void setup ( ) {
 #endif
 
     thrTimer.enabled         = true;
-    thrTimer.setInterval(1000); // 1sec
+    thrTimer.setInterval(60*1000); // 1min
     thrTimer.onRun(thrfTimer);
 
     thrContrl.add(&thrTimer);
