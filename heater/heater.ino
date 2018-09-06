@@ -96,7 +96,7 @@ void Init ( ) {
 
 void setup ( ) {
     Init();
-    Serial.begin(115200);
+    Serial.begin(9600);
 #if(WIFI == 1)
     Serial.print("\n***** WIFI *****");
     WiFi.begin(ssid, password);
