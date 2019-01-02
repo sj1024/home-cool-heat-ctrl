@@ -17,11 +17,10 @@
 
 #include <Wemospin.h>
 #define INIT_DI_CTRL        999
-#define INIT_HEAT_CTRL      0 
-#define PIN_RELAY_COOLER    WEMOS_PIN_D5
+#define INIT_HEAT_CTRL      1 
 #define PIN_RELAY_HEATER    WEMOS_PIN_D6
 #define PIN_LED             WEMOS_PIN_D4
-#define INTERVAL            (1000*60*5) // 5mins
+#define MACHINE_INTERVAL    (1000*60*5) // 5mins
 
 #include "Config.h"                          // password
 #include <math.h>
@@ -35,8 +34,48 @@ DHT12 dht12;                                    // Default Unit = CELSIUS, ID = 
 #include <WiFiClientSecure.h> 
 #include <TelegramBot.h>
 
+class cRelay {
+private:
+    int pin;
+    String status;
+    void ctrlpin(int c) {
+        ctrl = c;
+        if(ctrl == 1) {
+            pinMode(pin,   OUTPUT);
+            digitalWrite(pin, LOW);               // Relay ON 
+        } else {
+            digitalWrite(pin, HIGH);               // Relay OFF
+            pinMode(pin, INPUT);
+        }
+    }
+public:
+    int timer;
+    int ctrl;
+    cRelay(int _pin) {
+        pin = _pin;
+        timer = 0;
+        ctrlpin(0);
+    }
+    void dectimer() {
+        if(0 >= timer) {
+            ctrlpin(0);
+        } else {
+            timer = timer -1; 
+        }
+    }
+    void settimer(int t) {
+        if(t == 0) {
+            ctrlpin(0);
+        } else {
+            ctrlpin(1);
+        }
+        timer = t;
+    }
+};
+
 WiFiClientSecure net_ssl; 
 TelegramBot bot(BOT_TOKEN, net_ssl); 
+cRelay relay = cRelay(PIN_RELAY_HEATER);
 
 #if(WIFI==1)
 #include <aREST.h>
@@ -47,8 +86,6 @@ WiFiServer server(LISTEN_PORT);
 
 const char* ssid      = WIFI_SSID;              // your ssid
 const char* password  = WIFI_PASSWORD;          // your password
-
-
 
 typedef struct {
     float temp          =0;
@@ -73,6 +110,7 @@ Thread thrGetTemp           = Thread();
 #if(WIFI == 1)
 Thread thrRest              = Thread();
 #endif
+Thread thrTimer             = Thread();
 ThreadController thrContrl  = ThreadController();
 
 t_Climate_Def       t_Climate;
@@ -92,8 +130,6 @@ void Init ( ) {
     t_SysCtrl.timer             =0;
     t_SysCtrl.status_cool       ="RELAY_OFF";
     t_SysCtrl.status_heat       ="RELAY_OFF";
-    RelayCtrl(PIN_RELAY_COOLER, LOW); 
-    RelayCtrl(PIN_RELAY_HEATER, LOW); 
     pinMode(PIN_LED, OUTPUT);
     bot.begin();
 
@@ -125,69 +161,39 @@ void setup ( ) {
 #if(WIFI == 1)
     rest.variable("Temp",       &t_Climate.temp);
     rest.variable("Humi",       &t_Climate.humi);
+    rest.variable("Timer",      &relay.timer);
+    rest.variable("Ctrl",       &relay.ctrl);
+    rest.function("relayctrl",   RelayCtrl);
 
-#endif
-    thrGetTemp.enabled = true;
-    thrGetTemp.setInterval(INTERVAL);
-    thrGetTemp.onRun(thrfTemp);
-
-#if(WIFI == 1)
     thrRest.enabled         = true;
     thrRest.setInterval(100);
     thrRest.onRun(thrfRest);
-#endif
-
-    thrContrl.add(&thrGetTemp);
-#if(WIFI == 1)
     thrContrl.add(&thrRest);
 #endif
+    thrGetTemp.enabled = true;
+    thrGetTemp.setInterval(100);
+    thrGetTemp.onRun(thrfTemp);
+    thrContrl.add(&thrGetTemp);
+
+    thrTimer.enabled   = true;
+    thrTimer.setInterval(60000); // 1min
+    thrTimer.onRun(thrfTimer);
+    thrContrl.add(&thrTimer);
 }
 void loop ( ) {
     thrContrl.run();
 }
-void RelayCtrl (int pin, int ctrl ) {
-    if(ctrl == HIGH) {
-        pinMode(pin,   OUTPUT);
-        digitalWrite(pin, LOW);               // Relay ON 
-    } else {
-        digitalWrite(pin, HIGH);               // Relay OFF
-        pinMode(pin, INPUT);
-    }
-}
-void MachineHeat ( ) {
-    static String oldstatus="";
-#if(LOG_HEAT == 1)
-    Serial.print("\nt_SysCtrl.status_heat = ");
-    Serial.print(t_SysCtrl.status_heat);
-#endif
 
-    if(t_SysCtrl.status_heat == "RELAY_OFF") {
-        if(t_Climate.temp < (float)t_SysCtrl.heat) {
-            RelayCtrl(PIN_RELAY_HEATER, HIGH);
-            t_SysCtrl.status_heat ="RELAY_ON";
-            digitalWrite(PIN_LED, LOW); //ON
-#if(LOG_HEAT == 1)
-            Serial.print("\nRELAY_ON");
-#endif
-        }
-    } else {
-            RelayCtrl(PIN_RELAY_HEATER, LOW);
-            t_SysCtrl.status_heat ="RELAY_OFF";
-			digitalWrite(PIN_LED, HIGH); //OFF
-#if(LOG_HEAT == 1)
-            Serial.print("\nRELAY_OFF");
-#endif
-    }
-#if(LOG_HEAT == 1)
-    Serial.print("\nHeat Trigger = ");
-    Serial.print(String(t_SysCtrl.heat));
-#endif
+void MachineHeat ( ) {
+    if(t_Climate.temp < (float)t_SysCtrl.heat) {
+        relay.settimer(3); // 3mins on
 #if(WIFI ==1)
-    if(oldstatus != t_SysCtrl.status_heat) {
-        bot.sendMessage(ROOM_ID, "보일러실동파방지: " + t_SysCtrl.status_heat );  // Reply to the same chat with the same text
-        oldstatus = t_SysCtrl.status_heat;
-    }
+        bot.sendMessage(ROOM_ID, "보일러실동파방지 동작!");  // Reply to the same chat with the same text
 #endif
+#if(LOG_HEAT == 1)
+        Serial.print("\nRELAY_ON");
+#endif
+    }
 }
 void GetClimate ( t_Climate_Def *climate ) {
     float temp = dht12.readTemperature();
@@ -210,23 +216,33 @@ void GetClimate ( t_Climate_Def *climate ) {
     return;
 }
 void thrfTemp ( ) {
-    GetClimate(&t_Climate);
-    MachineHeat();
+    static int cnt;
+	if(cnt == 0) {
+        GetClimate(&t_Climate);
+        MachineHeat();
 #if(LOG_CLIMATE==1)      
-    Serial.print("\n* Temperature (℃) = ");
-    Serial.print(String(t_Climate.temp, 1));
-    Serial.print("\n* Relative Humidity (%) = ");
-    Serial.print(String(t_Climate.humi, 1));
-    Serial.print("\n* Absolute Humidity (%) = ");
-    Serial.print(String(t_Climate.absolute_humi, 1));
-    Serial.print("\n* Wet Bulb Temperature(℃) = ");
-    Serial.print(String(t_Climate.wet_temp, 1));
-    Serial.print("\n* Due Point Temperature(℃) = ");
-    Serial.print(String(t_Climate.dew_point, 1));
-    Serial.print("\n* Discomport Index = ");
-    Serial.print(String(t_Climate.di , 1));
-    Serial.print("\n--");
+        Serial.print("\n* Temperature (℃) = ");
+        Serial.print(String(t_Climate.temp, 1));
+        Serial.print("\n* Relative Humidity (%) = ");
+        Serial.print(String(t_Climate.humi, 1));
+        Serial.print("\n* Absolute Humidity (%) = ");
+        Serial.print(String(t_Climate.absolute_humi, 1));
+        Serial.print("\n* Wet Bulb Temperature(℃) = ");
+        Serial.print(String(t_Climate.wet_temp, 1));
+        Serial.print("\n* Due Point Temperature(℃) = ");
+        Serial.print(String(t_Climate.dew_point, 1));
+        Serial.print("\n* Discomport Index = ");
+        Serial.print(String(t_Climate.di , 1));
+        Serial.print("\n--");
 #endif
+        Serial.print("\nTick!!");
+	}
+	if(++cnt >= (MACHINE_INTERVAL/100)) {
+	    cnt =0;
+    }
+}
+void thrfTimer ( ) {
+    relay.dectimer();
 }
 void thrfRest ( ) {
 #if(WIFI == 1)
@@ -239,4 +255,11 @@ void thrfRest ( ) {
     }
     rest.handle(client);
 #endif
+}
+int RelayCtrl( String ctrl ) {
+    String r = ctrl.substring(0, 1);
+    String t = ctrl.substring(1, 4);
+    int timer = t.toInt();
+    relay.settimer(timer);
+    return relay.timer;
 }
