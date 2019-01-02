@@ -171,7 +171,7 @@ void setup ( ) {
     thrContrl.add(&thrRest);
 #endif
     thrGetTemp.enabled = true;
-    thrGetTemp.setInterval(100);
+    thrGetTemp.setInterval(10);
     thrGetTemp.onRun(thrfTemp);
     thrContrl.add(&thrGetTemp);
 
@@ -237,7 +237,7 @@ void thrfTemp ( ) {
 #endif
         Serial.print("\nTick!!");
 	}
-	if(++cnt >= (MACHINE_INTERVAL/100)) {
+	if(++cnt >= (MACHINE_INTERVAL/10)) { // as per 10 ms
 	    cnt =0;
     }
 }

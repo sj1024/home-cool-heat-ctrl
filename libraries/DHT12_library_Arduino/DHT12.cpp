@@ -61,3 +61,25 @@ float DHT12::readHumidity()
 	return resultado;
 }
 
+#if 0
+void DHT12::getClimate ( t_Climate_Def *climate ) {
+    float temp = DHT12::readTemperature();
+    float humi = DHT12::readHumidity();
+    //float temp = 100;
+    //float humi = 100;
+
+    float ah = 2165 * humi * 0.01 * 0.6108 * exp(17.27 * temp / (temp + 237.3)) / (temp + 273.16);
+    float wtemp = temp * atan(0.151977 * pow(humi + 8.313659, 0.5)) + atan(temp + humi) 
+                  - atan(humi - 1.676331) + 0.003918 * pow(humi, 1.5) * atan(0.023101 * humi) - 4.686035;
+    float dew_point = temp - ((14.55 + 0.114 * temp) * (1. - 0.01 * humi) 
+                  + pow((2.5 + 0.007 * temp) * (1. - 0.01 * humi), 3) + (15.9 + 0.117 * temp) * pow((1. - 0.01 * humi), 14));
+    float di = 0.72 * (temp + wtemp) + 40.6;
+    climate->temp = temp;
+    climate->humi = humi;
+    climate->wet_temp = wtemp;
+    climate->absolute_humi = ah;
+    climate->dew_point = dew_point;
+    climate->di = di;
+    return;
+}
+#endif
