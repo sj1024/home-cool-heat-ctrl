@@ -13,22 +13,16 @@ typedef struct {
 
 class HEATER {
     public:
-        int timer;
         int ctrl;
-        float temp;
-        float humi;
         HEATER(int _pin, DHT12* dht12, event_cb_t cb);
-        void interval(void);
-        void settimer(int t);
+		t_Climate_Def getclimate(void);
+        void ctrlpin(int c);
     private:
         int pin;
-        int cnt;
         String status;
         DHT12 *dht;                                  // Default Unit = CELSIUS, ID = 0x5c
         t_Climate_Def       climate;
         event_cb_t callback;
-        void ctrlpin(int c);
         void machine();
-		void getclimate(void);
 };
 

@@ -34,6 +34,7 @@ const char* password  = WIFI_PASSWORD;          // your password
 
 
 ThreadController thrContrl  = ThreadController();
+void config_rest_server_routing(void);
 
 /* <custom> */
 #define HTTP_REST_PORT 80
@@ -48,6 +49,8 @@ ESP8266WebServer http_rest_server(HTTP_REST_PORT);
 
 Thread thrTimer             = Thread();
 Thread thrMain              = Thread();
+volatile int timer=0;
+volatile int cnt=0;
 
 DHT12 dht12;
 volatile int callback_flag = 0;
@@ -56,6 +59,8 @@ TelegramBot bot(BOT_TOKEN, net_ssl);
 void callback_active(void);
 HEATER heater = HEATER(PIN_RELAY_HEATER, &dht12, &callback_active);
 
+void settimer(int t);
+void machine(void);
 /* </custom> */
 
 void Init ( ) {
@@ -63,15 +68,27 @@ void Init ( ) {
 }
 
 void thrfTimer() {
-    heater.interval();
+    
+
+    if(0 >= timer) {
+        heater.ctrlpin(0);
+    } else {
+        timer = timer -1; 
+    }
+    if((cnt % 5)==0) { // every 5 min
+        machine();
+    }
+    cnt++;
+
     if(callback_flag == 1) {
+        t_Climate_Def climate;
+        climate = heater.getclimate();
         Serial.println("\n\rcallback");
-        bot.sendMessage(ROOM_ID, "열선 동작(ºC): " + String(heater.temp));
+        bot.sendMessage(ROOM_ID, "열선 동작(ºC): " + String(climate.temp));
         callback_flag =0;
     }
 }
 
-void config_rest_server_routing(void);
 
 void setup ( ) {
     Init();
@@ -135,12 +152,14 @@ void callback_active() {
 
 void report(char* jsonmsgbuffer, int size) {
     StaticJsonBuffer<500> jsonBuffer;
+    t_Climate_Def climate;
+    climate = heater.getclimate();
 
     JsonObject& variables = jsonBuffer.createObject();
     variables.set("Ctrl",  heater.ctrl);
-    variables.set("Timer", heater.timer);
-    variables.set("Humi",  heater.humi);
-    variables.set("Temp",  heater.temp);
+    variables.set("Timer", timer);
+    variables.set("Humi",  climate.humi);
+    variables.set("Temp",  climate.temp);
 
     JsonObject& jsonObj = jsonBuffer.createObject();
     JsonArray& variable = jsonObj.createNestedArray("variables");
@@ -167,7 +186,7 @@ void json_to_resource(JsonObject& jsonBody) {
     Serial.print(ctrl);
     String t = ctrl.substring(1, 4);
     int timer = t.toInt();
-    heater.settimer(timer);
+    settimer(timer);
 }
 void post_put() {
     StaticJsonBuffer<200> jsonBuffer;
@@ -206,4 +225,21 @@ void config_rest_server_routing() {
     http_rest_server.on("/", HTTP_PUT, post_put);
 }
 
+
+void machine() {
+    t_Climate_Def climate;
+    climate = heater.getclimate();
+    if(climate.temp < (float)1) {
+        settimer(3); // 3 mins on
+    }
+}
+
+void settimer(int t) {
+    if(0 >= t) {
+        heater.ctrlpin(0);
+    } else {
+        heater.ctrlpin(1);
+    }
+    timer = t;
+}
 
