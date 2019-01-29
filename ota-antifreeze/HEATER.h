@@ -1,3 +1,4 @@
+// vim: set rnu sw=4 ss=4 ts=4 et smartindent autoindent fdm=indent :
 #include <DHT12.h>
 
 typedef void (*event_cb_t)(void);
@@ -15,7 +16,7 @@ class HEATER {
     public:
         int ctrl;
         HEATER(int _pin, DHT12* dht12, event_cb_t cb);
-		t_Climate_Def getclimate(void);
+        t_Climate_Def getclimate(void);
         void ctrlpin(int c);
     private:
         int pin;

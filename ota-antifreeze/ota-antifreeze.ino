@@ -2,20 +2,12 @@
 //
 //  ESP8266_DHT12_WiFi_WeMos.ino (2017.8.24) --> WeMos D1 Mini version
 //
-//  https://playground.arduino.cc/Main/Dht
-//  DHT12 Library --> https://github.com/Bobadas/DHT12_library_Arduino
-//
-//  Absolute Humidity --> http://biomet.ucdavis.edu/conversions/HumCon.pdf
-//  Wet-bulb Temperature --> http://journals.ametsoc.org/doi/pdf/10.1175/JAMC-D-11-0143.1
-//  Dew-point Temperature --> http://wahiduddin.net/calc/density_algorithms.htm
-//
  
 #include <Wemospin.h>
 #include <math.h>
 #include <Wire.h>                               // DHT12 uses I2C (GPIO4 = SDA, GPIO5 = SCL)
 #include <ESP8266WiFi.h>
 #include <WiFiClientSecure.h> 
-#include <aREST.h>
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
