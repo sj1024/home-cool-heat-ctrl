@@ -74,7 +74,7 @@ void thrfTimer() {
 
     if(callback_flag == 1) {
         t_Climate_Def climate;
-        climate = heater.getclimate();
+        dht12.readClimate(&climate);
         Serial.println("\n\rcallback");
         bot.sendMessage(ROOM_ID, "열선 동작(ºC): " + String(climate.temp));
         callback_flag =0;
@@ -145,7 +145,7 @@ void callback_active() {
 void report(char* jsonmsgbuffer, int size) {
     StaticJsonBuffer<500> jsonBuffer;
     t_Climate_Def climate;
-    climate = heater.getclimate();
+    dht12.readClimate(&climate);
 
     JsonObject& variables = jsonBuffer.createObject();
     variables.set("Ctrl",  heater.ctrl);
@@ -220,7 +220,7 @@ void config_rest_server_routing() {
 
 void machine() {
     t_Climate_Def climate;
-    climate = heater.getclimate();
+    dht12.readClimate(&climate);
     if(climate.temp < (float)1) {
         settimer(3); // 3 mins on
     }
