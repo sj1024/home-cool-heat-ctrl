@@ -16,10 +16,7 @@
 #include <ESP8266WebServer.h>
 #include <TelegramBot.h>
 #include "Config.h"                          // password
-#include "HEATER.h"
-
-#define PIN_RELAY_HEATER    WEMOS_PIN_D6
-#define PIN_LED             WEMOS_PIN_D4
+#include "RELAY.h"
 
 const char* ssid      = WIFI_SSID;              // your ssid
 const char* password  = WIFI_PASSWORD;          // your password
@@ -49,7 +46,7 @@ volatile int callback_flag = 0;
 WiFiClientSecure net_ssl; 
 TelegramBot bot(BOT_TOKEN, net_ssl); 
 void callback_active(void);
-HEATER heater = HEATER(PIN_RELAY_HEATER, &dht12, &callback_active);
+RELAY heater = RELAY(PIN_RELAY_HEATER, &callback_active);
 
 void settimer(int t);
 void machine(void);
