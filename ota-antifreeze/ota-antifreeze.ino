@@ -12,10 +12,12 @@
 #define WIFI_RETRY_DELAY 500
 #define MAX_WIFI_INIT_RETRY 50
 
-#define HOSTNAME "lib.ac"
+#define HOSTNAME "boil.heat"
 
 #define PIN_RELAY           WEMOS_PIN_D5
 #define PIN_LED             WEMOS_PIN_D4
+
+#define TIMER_INTERVAL      1000
 
 struct Led {
     byte id;
@@ -32,6 +34,7 @@ DHT12 dht12;
 volatile int timer=0;
 volatile int di=0;
 volatile int callback_flag = 0;
+volatile int ctrl = 0;
 void callback_active(void);
 RELAY relay = RELAY(PIN_RELAY, &callback_active);
 
@@ -61,31 +64,6 @@ void json_to_resource(JsonObject& jsonBody) {
     String ctrl= jsonBody["ctrl"];
     Serial.print("\n\r%% Ctrl Code: ");
     Serial.print(ctrl);
-
-    String powerctrl = ctrl.substring(0, 1);
-    if(powerctrl.toInt()  ==  0) {
-        Serial.print("\n\r%% Power off: ");
-        timer = 0;
-    }
-    else {
-        String t = ctrl.substring(1, 4);
-        timer = t.toInt() * 60;
-        Serial.print("\n\r%% Timer: ");
-        Serial.print(String(timer));
-        String d = ctrl.substring(4, 7);
-        di  = d.toInt();
-        Serial.print("\n\r%% DI: ");
-        Serial.print(String(di));
-
-        t_Climate_Def climate;
-        dht12.readClimate(&climate);
-
-        if(climate.di > di) {
-            relay.ctrlpin(1); // on
-        } else {
-            relay.ctrlpin(0); // off
-        }
-    }
 }
 
 void report(char* jsonmsgbuffer, int size) {
@@ -96,12 +74,9 @@ void report(char* jsonmsgbuffer, int size) {
 
     JsonObject& variables = jsonBuffer.createObject();
     variables.set("Hostname",  HOSTNAME);
-    variables.set("Ctrl",  relay.ctrl);
+    variables.set("Ctrl",  ctrl);
     variables.set("Timer", timer);
-    variables.set("DICtrl", di);
-    variables.set("Humi",  climate.humi);
     variables.set("Temp",  climate.temp);
-    variables.set("DI",  climate.di);
 
     JsonObject& jsonObj = jsonBuffer.createObject();
     JsonArray& variable = jsonObj.createNestedArray("variables");
@@ -212,16 +187,19 @@ void machine() {
     Serial.print("\n\r%%%%%%%%%%%%%%%%");
     Serial.print("\n\rTemp: ");
     Serial.print(String(climate.temp));
-    Serial.print("\n\rDI: ");
-    Serial.print(String(climate.di));
-    Serial.print("\n\rTime left: ");
-    Serial.print(String(timer));
-    Serial.print("\n\rCtrl DI: ");
-    Serial.print(String(di));
-    if(climate.di>di && timer > 0) {
-        relay.ctrlpin(1); // on
-    } else {
+
+    if(ctrl == 1) {
         relay.ctrlpin(0); // off
+		ctrl = 0;
+        Serial.print("\n\rRelay Off: Overheeat");
+	} else if(climate.temp < 1) { // freezing ?
+        relay.ctrlpin(1); // on
+		ctrl = 1;
+        Serial.print("\n\rRelay On: freezing ");
+    } else {
+		ctrl = 0;
+        relay.ctrlpin(0); // off
+        Serial.print("\n\rRelay Off: Warm");
     }
 
 }
@@ -232,7 +210,7 @@ void loop(void) {
     ArduinoOTA.handle();
     http_rest_server.handleClient();
     if(0 >= timer) {
-        relay.ctrlpin(0);
+        relay.ctrlpin(0); // off
     } else {
         timer--;
     }
@@ -243,6 +221,6 @@ void loop(void) {
     if(callback_flag == 1) {
         callback_flag =0;
     }
-    delay(1000);
+    delay(TIMER_INTERVAL);
 
 }

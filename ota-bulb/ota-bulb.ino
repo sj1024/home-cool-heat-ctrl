@@ -10,7 +10,7 @@
 #define WIFI_RETRY_DELAY 500
 #define MAX_WIFI_INIT_RETRY 50
 
-#define HOSTNAME "backyard-bulb"
+#define HOSTNAME "yard.bulb"
 
 #define PIN_RELAY           WEMOS_PIN_D5
 #define PIN_LED             WEMOS_PIN_D4
