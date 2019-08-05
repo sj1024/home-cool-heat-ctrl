@@ -68,8 +68,10 @@ void call_status (TBMessage msg) {
   String status;
   t_Climate_Def climate;
   dht12.readClimate(&climate);
+  double inte, frac;
+  frac = modf((float)get_timeleft()/3600000, &inte);
   status =  String("Temp: ") + String(climate.temp) + \
-	String("\nTime left: ") + String((float)get_timeleft()/3600000) + String(" H") + \
+	String("\nTime left: ") + String(int(inte)) + String(":") + String(int(frac*60)) + \
 	String("\nDi: ") + String(climate.di) + String(" (") + String(di) + String(")") ;
   if(climate.di>di && get_timeleft() > 0) {
     status  = status  + String("\nA/C ON");

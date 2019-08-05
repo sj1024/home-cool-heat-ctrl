@@ -12,8 +12,6 @@ Description: a simple example that do:
 */
 #include <MyConfig.h>
 #include <CTBot.h>
-#include <Wire.h>                               // DHT12 uses I2C (GPIO4 = SDA, GPIO5 = SCL)
-#include <DHT12.h>  
 #include <Wemospin.h>
 #include <Thread.h>
 #include <ThreadController.h>
@@ -38,7 +36,6 @@ String token = CHAINBULB_BOT_TOKEN;   // 8975
 
 long timer = 0;
 
-DHT12 dht12;
 RELAY relay = RELAY(PIN_RELAY);
 
 Thread thrTelegram = Thread();
@@ -65,13 +62,14 @@ void machine() {
 }
 void call_status (TBMessage msg) {
   String status;
-  t_Climate_Def climate;
-  dht12.readClimate(&climate);
-  status =  String("Time left: ") + String((float)get_timeleft()/3600000) + String(" H");
+  double inte, frac;
+  frac = modf((float)get_timeleft()/3600000, &inte);
+  status = String("Time left: ") + String(int(inte)) + String(":") + String(int(frac*60)) \
+      + String("\nLight ");
   if(get_timeleft() > 0) {
-        status =  status + String("\nLight ON");
+        status =  status + String("ON");
   } else {
-        status =  status + String("\nLight OFF");
+        status =  status + String("OFF");
   }
   myBot.sendMessage(msg.sender.id,  status, CmdKbd);
 }
@@ -127,11 +125,6 @@ void thrfTimer () {
 void thrfTelegram () {
   ArduinoOTA.handle();
   TelegramMessageHandler();
-  Serial.print("\r\nTime left:");
-  Serial.print(String(get_timeleft()/3600000.0));
-  Serial.print("\r\nMili:");
-  Serial.print(String(millis()));
-
 }
 
 void loop () {
@@ -141,7 +134,6 @@ void loop () {
 void setup() {
   // initialize the Serial
   Serial.begin(9600);
-  Wire.begin();
   Serial.println("Starting TelegramBot...");
 
   // connect the ESP8266 to the desired access point
