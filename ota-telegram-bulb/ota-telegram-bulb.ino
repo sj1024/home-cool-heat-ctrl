@@ -18,6 +18,7 @@ Description: a simple example that do:
 #include <Thread.h>
 #include <ThreadController.h>
 #include <ArduinoOTA.h>
+#include <Regexp.h>
 #include "RELAY.h"
 
 #define OFF_CALLBACK "RelayOff" // callback data sent when "LIGHT OFF" button is pressed
@@ -31,12 +32,11 @@ CTBotInlineKeyboard CmdKbd;  // custom inline keyboard object helper
 
 String ssid = WIFI_SSID;     // REPLACE mySSID WITH YOUR WIFI SSID
 String pass = WIFI_PASSWORD; // REPLACE myPassword YOUR WIFI PASSWORD, IF ANY
-//String token = AC_BEDROOM_BOT_TOKEN;   // REPLACE myToken WITH YOUR TELEGRAM BOT TOKEN
-//String token = AC_LIBRARY_BOT_TOKEN;   // REPLACE myToken WITH YOUR TELEGRAM BOT TOKEN
-String token = CHAINBULB_BOT_TOKEN;   // REPLACE myToken WITH YOUR TELEGRAM BOT TOKEN
+//String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
+//String token = AC_BEDROOM_BOT_TOKEN;   // 8508
+String token = CHAINBULB_BOT_TOKEN;   // 8975
 
 long timer = 0;
-float di = 0;
 
 DHT12 dht12;
 RELAY relay = RELAY(PIN_RELAY);
@@ -67,7 +67,12 @@ void call_status (TBMessage msg) {
   String status;
   t_Climate_Def climate;
   dht12.readClimate(&climate);
-  status =  String("Timer: ") + String((float)get_timeleft()/3600000) + String(" H");
+  status =  String("Time left: ") + String((float)get_timeleft()/3600000) + String(" H");
+  if(get_timeleft() > 0) {
+        status =  status + String("\nLight ON");
+  } else {
+        status =  status + String("\nLight OFF");
+  }
   myBot.sendMessage(msg.sender.id,  status, CmdKbd);
 }
 
@@ -80,6 +85,9 @@ void set_timer(TBMessage msg, long _timer) {
 void TelegramMessageHandler() {
   // a variable to store telegram message data
   TBMessage msg;
+  MatchState ms;
+  char buf[60];
+
   // if there is an incoming message...
   if (myBot.getNewMessage(msg)) {
     // check what kind of message I received
@@ -87,31 +95,12 @@ void TelegramMessageHandler() {
       // received a text message
       myBot.sendMessage(msg.sender.id, "Getting Start", CmdKbd);
     } else if (msg.messageType == CTBotMessageQuery) {
+      msg.callbackQueryData.toCharArray(buf,60);
+      ms.Target(buf);
       // received a callback query message
-      if (msg.callbackQueryData.equals("TIMER_1H")) {
-        set_timer(msg, 1);
-      } else if (msg.callbackQueryData.equals("TIMER_2H")) {
-        set_timer(msg, 2);
-      } else if (msg.callbackQueryData.equals("TIMER_3H")) {
-        set_timer(msg, 3);
-      } else if (msg.callbackQueryData.equals("TIMER_4H")) {
-        set_timer(msg, 4);
-      } else if (msg.callbackQueryData.equals("TIMER_5H")) {
-        set_timer(msg, 5);
-      } else if (msg.callbackQueryData.equals("TIMER_6H")) {
-        set_timer(msg, 6);
-      } else if (msg.callbackQueryData.equals("TIMER_7H")) {
-        set_timer(msg, 7);
-      } else if (msg.callbackQueryData.equals("TIMER_8H")) {
-        set_timer(msg, 8);
-      } else if (msg.callbackQueryData.equals("TIMER_9H")) {
-        set_timer(msg, 9);
-      } else if (msg.callbackQueryData.equals("TIMER_10H")) {
-        set_timer(msg, 10);
-      } else if (msg.callbackQueryData.equals("TIMER_11H")) {
-        set_timer(msg, 11);
-      } else if (msg.callbackQueryData.equals("TIMER_12H")) {
-        set_timer(msg, 12);
+      if(REGEXP_MATCHED == ms.Match("(TIMER_)(%d+)H", 0)) {
+        String timer = ms.GetCapture(buf, 1);
+        set_timer(msg, timer.toInt());
       } else if (msg.callbackQueryData.equals(STATUS_CALLBACK)) {
         call_status(msg);
       } else if (msg.callbackQueryData.equals(OFF_CALLBACK)) {

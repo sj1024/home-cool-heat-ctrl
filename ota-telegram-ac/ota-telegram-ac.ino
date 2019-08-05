@@ -19,6 +19,7 @@ Description: a simple example that do:
 #include <ThreadController.h>
 #include <ArduinoOTA.h>
 #include "RELAY.h"
+#include <Regexp.h>
 
 #define OFF_CALLBACK "RelayOff" // callback data sent when "LIGHT OFF" button is pressed
 #define STATUS_CALLBACK "Status" // callback data sent when "LIGHT OFF" button is pressed
@@ -31,11 +32,11 @@ CTBotInlineKeyboard CmdKbd;  // custom inline keyboard object helper
 
 String ssid = WIFI_SSID;     // REPLACE mySSID WITH YOUR WIFI SSID
 String pass = WIFI_PASSWORD; // REPLACE myPassword YOUR WIFI PASSWORD, IF ANY
-//String token = AC_BEDROOM_BOT_TOKEN;   // REPLACE myToken WITH YOUR TELEGRAM BOT TOKEN
-String token = AC_LIBRARY_BOT_TOKEN;   // REPLACE myToken WITH YOUR TELEGRAM BOT TOKEN
-
+//String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
+String token = AC_BEDROOM_BOT_TOKEN;   // 8508
+//String token = CHAINBULB_BOT_TOKEN;   // 8975
 long timer = 0;
-float di = 0;
+float di = 99.9;
 
 DHT12 dht12;
 RELAY relay = RELAY(PIN_RELAY);
@@ -68,9 +69,13 @@ void call_status (TBMessage msg) {
   t_Climate_Def climate;
   dht12.readClimate(&climate);
   status =  String("Temp: ") + String(climate.temp) + \
-            String("\nDi: ") + String(climate.di) + \
-            String("\nDiCtrl: ") + String(di) + \
-            String("\nTimer: ") + String((float)get_timeleft()/3600000) + String(" H");
+	String("\nTime left: ") + String((float)get_timeleft()/3600000) + String(" H") + \
+	String("\nDi: ") + String(climate.di) + String(" (") + String(di) + String(")") ;
+  if(climate.di>di && get_timeleft() > 0) {
+    status  = status  + String("\nA/C ON");
+  } else {
+    status  = status  + String("\nA/C OFF");
+  }
   myBot.sendMessage(msg.sender.id,  status, CmdKbd);
 }
 
@@ -89,6 +94,9 @@ void set_timer(TBMessage msg, long _timer) {
 void TelegramMessageHandler() {
   // a variable to store telegram message data
   TBMessage msg;
+  MatchState ms;
+  char buf[60];
+
   // if there is an incoming message...
   if (myBot.getNewMessage(msg)) {
     // check what kind of message I received
@@ -97,46 +105,14 @@ void TelegramMessageHandler() {
       myBot.sendMessage(msg.sender.id, "Getting Start", CmdKbd);
     } else if (msg.messageType == CTBotMessageQuery) {
       // received a callback query message
-      if (msg.callbackQueryData.equals("DI_70")) {
-        set_di(msg, 70);
-      } else if (msg.callbackQueryData.equals("DI_71")) {
-        set_di(msg, 71);
-      } else if (msg.callbackQueryData.equals("DI_72")) {
-        set_di(msg, 72);
-      } else if (msg.callbackQueryData.equals("DI_73")) {
-        set_di(msg, 73);
-      } else if (msg.callbackQueryData.equals("DI_74")) {
-        set_di(msg, 74);
-      } else if (msg.callbackQueryData.equals("DI_75")) {
-        set_di(msg, 75);
-      } else if (msg.callbackQueryData.equals("DI_76")) {
-        set_di(msg, 76);
-      } else if (msg.callbackQueryData.equals("DI_77")) {
-        set_di(msg, 77);
-      } else if (msg.callbackQueryData.equals("TIMER_1H")) {
-        set_timer(msg, 1);
-      } else if (msg.callbackQueryData.equals("TIMER_2H")) {
-        set_timer(msg, 2);
-      } else if (msg.callbackQueryData.equals("TIMER_3H")) {
-        set_timer(msg, 3);
-      } else if (msg.callbackQueryData.equals("TIMER_4H")) {
-        set_timer(msg, 4);
-      } else if (msg.callbackQueryData.equals("TIMER_5H")) {
-        set_timer(msg, 5);
-      } else if (msg.callbackQueryData.equals("TIMER_6H")) {
-        set_timer(msg, 6);
-      } else if (msg.callbackQueryData.equals("TIMER_7H")) {
-        set_timer(msg, 7);
-      } else if (msg.callbackQueryData.equals("TIMER_8H")) {
-        set_timer(msg, 8);
-      } else if (msg.callbackQueryData.equals("TIMER_9H")) {
-        set_timer(msg, 9);
-      } else if (msg.callbackQueryData.equals("TIMER_10H")) {
-        set_timer(msg, 10);
-      } else if (msg.callbackQueryData.equals("TIMER_11H")) {
-        set_timer(msg, 11);
-      } else if (msg.callbackQueryData.equals("TIMER_12H")) {
-        set_timer(msg, 12);
+      msg.callbackQueryData.toCharArray(buf,60);
+      ms.Target(buf);
+      if(REGEXP_MATCHED == ms.Match("(DI_)(%d+)", 0)) {
+        String di = ms.GetCapture(buf, 1);
+        set_di(msg, di.toInt());
+      } else if(REGEXP_MATCHED == ms.Match("(TIMER_)(%d+)H", 0)) {
+        String timer = ms.GetCapture(buf, 1);
+        set_timer(msg, timer.toInt());
       } else if (msg.callbackQueryData.equals(STATUS_CALLBACK)) {
         call_status(msg);
       } else if (msg.callbackQueryData.equals(OFF_CALLBACK)) {
@@ -222,27 +198,26 @@ void setup() {
   CmdKbd.addButton("STATUS", STATUS_CALLBACK, CTBotKeyboardButtonQuery);
   CmdKbd.addRow();
   //
-  CmdKbd.addButton("DI 70", "DI_70", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 71", "DI_71", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 72", "DI_72", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 73", "DI_73", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("70 DI", "DI_70", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("71 DI", "DI_71", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("72 DI", "DI_72", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("73 DI", "DI_73", CTBotKeyboardButtonQuery);
   CmdKbd.addRow();
-  CmdKbd.addButton("DI 74", "DI_74", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 75", "DI_75", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 76", "DI_76", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("DI 77", "DI_77", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("74 DI", "DI_74", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("75 DI", "DI_75", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("76 DI", "DI_76", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("77 DI", "DI_77", CTBotKeyboardButtonQuery);
   CmdKbd.addRow();
   //
   CmdKbd.addButton("1 H", "TIMER_1H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("2 H", "TIMER_2H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("3 H", "TIMER_3H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("4 H", "TIMER_4H", CTBotKeyboardButtonQuery);
-  CmdKbd.addRow();
   CmdKbd.addButton("5 H", "TIMER_5H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("6 H", "TIMER_6H", CTBotKeyboardButtonQuery);
+  CmdKbd.addRow();
   CmdKbd.addButton("7 H", "TIMER_7H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("8 H", "TIMER_8H", CTBotKeyboardButtonQuery);
-  CmdKbd.addRow();
   CmdKbd.addButton("9 H", "TIMER_9H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("10 H", "TIMER_10h", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("11 H", "TIMER_11H", CTBotKeyboardButtonQuery);
