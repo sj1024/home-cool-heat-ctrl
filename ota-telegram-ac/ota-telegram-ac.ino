@@ -3,17 +3,17 @@ Name:        inlineKeyboard.ino
 Created:     29/05/2018
 Author:      Stefano Ledda <shurillu@tiscalinet.it>
 Description: a simple example that do:
-             1) if a "show keyboard" text message is received, show the inline custom keyboard, 
+             1) if a "show keyboard" text message is received, show the inline custom keyboard,
                 otherwise reply the sender with "Try 'show keyboard'" message
              2) if "LIGHT ON" inline keyboard button is pressed turn on the onboard LED and show an alert message
              3) if "LIGHT OFF" inline keyboard button is pressed, turn off the onboard LED and show a popup message
-             4) if "see docs" inline keyboard button is pressed, 
+             4) if "see docs" inline keyboard button is pressed,
                 open a browser window with URL "https://github.com/shurillu/CTBot"
 */
 #include <MyConfig.h>
 #include <CTBot.h>
 #include <Wire.h>                               // DHT12 uses I2C (GPIO4 = SDA, GPIO5 = SCL)
-#include <DHT12.h>  
+#include <DHT12.h>
 #include <Wemospin.h>
 #include <Thread.h>
 #include <ThreadController.h>
@@ -32,8 +32,8 @@ CTBotInlineKeyboard CmdKbd;  // custom inline keyboard object helper
 
 String ssid = WIFI_SSID;     // REPLACE mySSID WITH YOUR WIFI SSID
 String pass = WIFI_PASSWORD; // REPLACE myPassword YOUR WIFI PASSWORD, IF ANY
-//String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
-String token = AC_BEDROOM_BOT_TOKEN;   // 8508
+String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
+//String token = AC_BEDROOM_BOT_TOKEN;   // 8508
 //String token = CHAINBULB_BOT_TOKEN;   // 8975
 long timer = 0;
 float di = 99.9;
@@ -82,13 +82,13 @@ void call_status (TBMessage msg) {
 }
 
 void set_di(TBMessage msg, int _di) {
-   di = (float)_di; 
+   di = (float)_di;
    machine();
    call_status(msg);
 }
 
 void set_timer(TBMessage msg, long _timer) {
-   timer = _timer * 3600000; // hour to mm 
+   timer = _timer * 3600000; // hour to mm
    machine();
    call_status(msg);
 }
@@ -131,8 +131,8 @@ void thrfTimer () {
   static int cnt = 0;
   if(0 >= get_timeleft()) {
       relay.ctrlpin(0);
-  } 
-  if((cnt++ % 5) == 0) { //every 5 min 
+  }
+  if((cnt++ % 5) == 0) { //every 5 min
       machine();
   }
   Serial.println(String(get_timeleft()));
@@ -195,9 +195,9 @@ void setup() {
   // inline keyboard customization
   // add a query button to the first row of the inline keyboard
   // add another query button to the first row of the inline keyboard
-  CmdKbd.addButton("OFF", OFF_CALLBACK, CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("\xF0\x9F\x9A\xAB", OFF_CALLBACK, CTBotKeyboardButtonQuery);
   // add a new empty button row
-  CmdKbd.addButton("STATUS", STATUS_CALLBACK, CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("\xF0\x9F\x94\x8D", STATUS_CALLBACK, CTBotKeyboardButtonQuery);
   CmdKbd.addRow();
   //
   CmdKbd.addButton("70 DI", "DI_70", CTBotKeyboardButtonQuery);
