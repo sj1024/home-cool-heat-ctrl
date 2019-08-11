@@ -32,11 +32,10 @@ CTBotInlineKeyboard CmdKbd;  // custom inline keyboard object helper
 
 String ssid = WIFI_SSID;     // REPLACE mySSID WITH YOUR WIFI SSID
 String pass = WIFI_PASSWORD; // REPLACE myPassword YOUR WIFI PASSWORD, IF ANY
-String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
-//String token = AC_BEDROOM_BOT_TOKEN;   // 8508
-//String token = CHAINBULB_BOT_TOKEN;   // 8975
+String token = AC_LIBRARY_BOT_TOKEN;
+//String token = AC_BEDROOM_BOT_TOKEN;
 long timer = 0;
-float di = 99.9;
+float di = 77;
 
 DHT12 dht12;
 RELAY relay = RELAY(PIN_RELAY);
@@ -72,12 +71,13 @@ void call_status (TBMessage msg) {
   frac = modf((float)get_timeleft()/3600000, &inte);
   status =  String("Temp: ") + String(climate.temp) + \
 	String("\nTime left: ") + String(int(inte)) + String(":") + String(int(frac*60)) + \
-	String("\nDi: ") + String(climate.di) + String(" (") + String(di) + String(")") ;
+	String("\nDi: ") + String(climate.di) + String("(\xF0\x9F\x93\x8C ") + String(di) + String(")") ;
   if(climate.di>di && get_timeleft() > 0) {
     status  = status  + String("\nA/C ON");
   } else {
     status  = status  + String("\nA/C OFF");
   }
+  status  = status + String("\nAddr: ") + WiFi.localIP().toString();
   myBot.sendMessage(msg.sender.id,  status, CmdKbd);
 }
 
@@ -221,7 +221,7 @@ void setup() {
   CmdKbd.addButton("7 H", "TIMER_7H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("8 H", "TIMER_8H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("9 H", "TIMER_9H", CTBotKeyboardButtonQuery);
-  CmdKbd.addButton("10 H", "TIMER_10h", CTBotKeyboardButtonQuery);
+  CmdKbd.addButton("10 H", "TIMER_10H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("11 H", "TIMER_11H", CTBotKeyboardButtonQuery);
   CmdKbd.addButton("12 H", "TIMER_12H", CTBotKeyboardButtonQuery);
 

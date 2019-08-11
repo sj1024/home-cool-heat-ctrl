@@ -30,9 +30,7 @@ CTBotInlineKeyboard CmdKbd;  // custom inline keyboard object helper
 
 String ssid = WIFI_SSID;     // REPLACE mySSID WITH YOUR WIFI SSID
 String pass = WIFI_PASSWORD; // REPLACE myPassword YOUR WIFI PASSWORD, IF ANY
-//String token = AC_LIBRARY_BOT_TOKEN;   // 86f6
-//String token = AC_BEDROOM_BOT_TOKEN;   // 8508
-String token = CHAINBULB_BOT_TOKEN;   // 8975
+String token = CHAINBULB_BOT_TOKEN;
 
 long timer = 0;
 
@@ -71,6 +69,7 @@ void call_status (TBMessage msg) {
   } else {
         status =  status + String("OFF");
   }
+  status  = status + String("\n\nAddr: ") + WiFi.localIP().toString();
   myBot.sendMessage(msg.sender.id,  status, CmdKbd);
 }
 
