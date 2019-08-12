@@ -24,8 +24,8 @@ Description: a simple example that do:
 
 
 //#define DEVICE DEVICE_AC_LIBRARY
-//#define DEVICE DEVICE_AC_BEDROOM
-#define DEVICE DEVICE_HEATWIRE
+#define DEVICE DEVICE_AC_BEDROOM
+//#define DEVICE DEVICE_HEATWIRE
 //#define DEVICE DEVICE_WIREBULB
 
 
@@ -72,11 +72,11 @@ unsigned long get_timeleft() {
     return timer;
 }
 void machine() {
-#if(DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_HEATWIRE)
+#if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_HEATWIRE)
     t_Climate_Def climate;
     dht12.readClimate(&climate);
 #endif
-#if(DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_AC_BEDROOM)
+#if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY)
     if(climate.di>di && get_timeleft() > 0) {
         relay.ctrlpin(1); // on
     } else {
@@ -96,6 +96,12 @@ void machine() {
         relay.ctrlpin(0); // off
         Serial.print("\n\rRelay Off: Warm");
     }
+#elif(DEVICE==DEVICE_WIREBULB)
+    if(get_timeleft() > 0) {
+        relay.ctrlpin(1); // on
+    } else {
+        relay.ctrlpin(0); // off
+    }
 #endif
 }
 void call_status (TBMessage msg) {
@@ -114,9 +120,9 @@ void call_status (TBMessage msg) {
     status += String("\nDi: ") + String(climate.di) + String("   \xF0\x9F\x93\x8C ") + String(di);
     status += String("\nA/C: ");
     if(climate.di>di && get_timeleft() > 0) {
-        status  = status  + String("\nA/C ON");
+        status  = status  + String("ON");
     } else {
-        status  = status  + String("\nA/C OFF");
+        status  = status  + String("OFF");
     }
 #endif
 #if(DEVICE==DEVICE_HEATWIRE)
@@ -188,16 +194,21 @@ void TelegramMessageHandler() {
                 // received a callback query message
                 msg.callbackQueryData.toCharArray(buf,60);
                 ms.Target(buf);
-#if(DEVICE==DEVICE_AC_LIBRARY || DEIVCE==DEVICE_AC_BEDROOM)
+                Serial.println(msg.callbackQueryData);
+#if(DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_AC_BEDROOM)
                 if(REGEXP_MATCHED == ms.Match("(DI_)(%d+)", 0)) {
+                    Serial.println("DI cmd");
                     String di = ms.GetCapture(buf, 1);
                     set_di(msg, di.toInt());
                 } else if(REGEXP_MATCHED == ms.Match("(TIMER_)(%d+)H", 0)) {
+                    Serial.println("Timer cmd");
                     String timer = ms.GetCapture(buf, 1);
                     set_timer(msg, timer.toInt());
                 } else if (msg.callbackQueryData.equals(STATUS_CALLBACK)) {
+                    Serial.println("Status cmd");
                     call_status(msg);
                 } else if (msg.callbackQueryData.equals(OFF_CALLBACK)) {
+                    Serial.println("Off cmd");
                     timer = 0;
                     relay.ctrlpin(0);
                     call_status(msg);
@@ -240,6 +251,10 @@ void thrfTelegram () {
     Serial.print(String(get_timeleft()/3600000.0));
     Serial.print("\r\nMili:");
     Serial.print(String(millis()));
+#if(DEVICE== DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY)
+    Serial.print("\r\nDi:");
+    Serial.println(di);
+#endif
 }
 
 void loop () {
@@ -251,6 +266,8 @@ void setup() {
     Serial.begin(9600);
     Wire.begin();
     Serial.println("Starting TelegramBot...");
+    Serial.print("Bot Token: ");
+    Serial.println(token);
 
     // connect the ESP8266 to the desired access point
     myBot.wifiConnect(ssid, pass);
@@ -284,16 +301,10 @@ void setup() {
         else if (error == OTA_END_ERROR) Serial.println("End Failed");
     });
     ArduinoOTA.begin();
-
-    // inline keyboard customization
-    // add a query button to the first row of the inline keyboard
-    // add another query button to the first row of the inline keyboard
-    // add a new empty button row
     CmdKbd.addButton("\xF0\x9F\x94\x8D", STATUS_CALLBACK, CTBotKeyboardButtonQuery);
 #if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_WIREBULB)
     CmdKbd.addButton("\xF0\x9F\x9A\xAB", OFF_CALLBACK, CTBotKeyboardButtonQuery);
     CmdKbd.addRow();
-    //
     CmdKbd.addButton("1 H", "TIMER_1H", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("2 H", "TIMER_2H", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("3 H", "TIMER_3H", CTBotKeyboardButtonQuery);
@@ -309,6 +320,7 @@ void setup() {
     CmdKbd.addButton("12 H", "TIMER_12H", CTBotKeyboardButtonQuery);
 #endif
 #if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY)
+    CmdKbd.addRow();
     CmdKbd.addButton("70 DI", "DI_70", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("71 DI", "DI_71", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("72 DI", "DI_72", CTBotKeyboardButtonQuery);
@@ -318,9 +330,7 @@ void setup() {
     CmdKbd.addButton("75 DI", "DI_75", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("76 DI", "DI_76", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("77 DI", "DI_77", CTBotKeyboardButtonQuery);
-    CmdKbd.addRow();
 #endif
-
     thrTimer.enabled = true;
     thrTimer.setInterval(60000);
     thrTimer.onRun(thrfTimer);
