@@ -24,8 +24,8 @@ Description: a simple example that do:
 
 
 //#define DEVICE DEVICE_AC_LIBRARY
-#define DEVICE DEVICE_AC_BEDROOM
-//#define DEVICE DEVICE_HEATWIRE
+//#define DEVICE DEVICE_AC_BEDROOM
+#define DEVICE DEVICE_HEATWIRE
 //#define DEVICE DEVICE_WIREBULB
 
 
@@ -52,8 +52,9 @@ String token = HEATWIRE_BOT_TOKEN;
 #endif
 
 long timer = 0;
-float di = 77;
+float di = 80;
 volatile int ctrl = 0;
+TBMessage heat_notice_msg;
 
 DHT12 dht12;
 RELAY relay = RELAY(PIN_RELAY);
@@ -71,6 +72,8 @@ unsigned long get_timeleft() {
         timer = 0;
     return timer;
 }
+
+
 void machine() {
 #if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_HEATWIRE)
     t_Climate_Def climate;
@@ -86,11 +89,17 @@ void machine() {
     if(ctrl == 1) {
         relay.ctrlpin(0); // off
         ctrl = 0;
-        Serial.print("\n\rRelay Off: Overheeat");
+        Serial.print("\n\rRelay Off: Overheat");
+        String text = String("HeatWire OFF: Overheat");
+        text += String("\nYour id: ") + String(heat_notice_msg.sender.id);
+        myBot.sendMessage(heat_notice_msg.sender.id, text, CmdKbd);
     } else if(climate.temp < HEAT_TEMP ) { // freezing ?
         relay.ctrlpin(1); // on
         ctrl = 1;
         Serial.print("\n\rRelay On: freezing ");
+        String text = String("HeatWire ON");
+        text += String("\nYour id: ") + String(heat_notice_msg.sender.id);
+        myBot.sendMessage(heat_notice_msg.sender.id, text, CmdKbd);
     } else {
         ctrl = 0;
         relay.ctrlpin(0); // off
@@ -106,6 +115,7 @@ void machine() {
 }
 void call_status (TBMessage msg) {
     String status;
+
 #if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY || DEVICE==DEVICE_HEATWIRE)
     t_Climate_Def climate;
     dht12.readClimate(&climate);
@@ -126,12 +136,13 @@ void call_status (TBMessage msg) {
     }
 #endif
 #if(DEVICE==DEVICE_HEATWIRE)
+    heat_notice_msg = msg;
     status =  String("Temp: ") + String(climate.temp) ;
-    status += String("\nHeat Wire: ");
+    status += String("\nThe room is ");
     if(climate.temp <= HEAT_TEMP) {
-        status  += String("ON");
+        status  += String("FREEZZING");
     } else {
-        status  += String("OFF");
+        status  += String("WARM ENOUGH");
     }
 #endif
 #if(DEVICE==DEVICE_WIREBULB)
@@ -255,6 +266,8 @@ void thrfTelegram () {
     Serial.print("\r\nDi:");
     Serial.println(di);
 #endif
+#if(DEVICE== DEVICE_HEATWIRE)
+#endif
 }
 
 void loop () {
@@ -321,15 +334,17 @@ void setup() {
 #endif
 #if(DEVICE==DEVICE_AC_BEDROOM || DEVICE==DEVICE_AC_LIBRARY)
     CmdKbd.addRow();
-    CmdKbd.addButton("70 DI", "DI_70", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("71 DI", "DI_71", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("72 DI", "DI_72", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("73 DI", "DI_73", CTBotKeyboardButtonQuery);
-    CmdKbd.addRow();
     CmdKbd.addButton("74 DI", "DI_74", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("75 DI", "DI_75", CTBotKeyboardButtonQuery);
+    CmdKbd.addRow();
     CmdKbd.addButton("76 DI", "DI_76", CTBotKeyboardButtonQuery);
     CmdKbd.addButton("77 DI", "DI_77", CTBotKeyboardButtonQuery);
+    CmdKbd.addButton("78 DI", "DI_78", CTBotKeyboardButtonQuery);
+    CmdKbd.addButton("79 DI", "DI_79", CTBotKeyboardButtonQuery);
+    CmdKbd.addButton("80 DI", "DI_80", CTBotKeyboardButtonQuery);
 #endif
     thrTimer.enabled = true;
     thrTimer.setInterval(60000);
